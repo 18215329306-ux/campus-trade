@@ -3,16 +3,23 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { MessagePlugin } from 'tdesign-vue-next'
 import { supabase } from '../supabase'
+import { user, initAuth } from '../stores/auth'
 
 const router = useRouter()
 
 const title = ref('')
 const price = ref('')
 const description = ref('')
-const contact = ref('')
 const imageFiles = ref([])
 const imagePreviews = ref([])
 const publishing = ref(false)
+
+// 联系方式子项
+const contactWechat = ref('')
+const contactQQ = ref('')
+const contactPhone = ref('')
+const contactOtherType = ref('')
+const contactOtherValue = ref('')
 
 const categories = ['书籍', '电子', '生活', '衣物', '其他']
 const categoryIndex = ref(0)
@@ -22,6 +29,20 @@ const conditionIndex = ref(1)
 
 const campuses = ['北校区', '南校区', '东校区', '西校区']
 const campusIndex = ref(0)
+
+// 价格输入校验：>=0，最多两位小数
+function onPriceChange(val) {
+  // 移除非数字和小数点
+  let v = val.replace(/[^\d.]/g, '')
+  // 去掉多余小数点
+  const parts = v.split('.')
+  if (parts.length > 2) v = parts[0] + '.' + parts.slice(1).join('')
+  // 限制两位小数
+  if (parts.length === 2 && parts[1].length > 2) {
+    v = parts[0] + '.' + parts[1].slice(0, 2)
+  }
+  price.value = v
+}
 
 // 文件选择
 function onFileChange(e) {
@@ -68,6 +89,12 @@ async function uploadImage(file) {
 }
 
 async function publish() {
+  await initAuth()
+  if (!user.value) {
+    MessagePlugin.warning('请先登录后再发布')
+    router.push('/login')
+    return
+  }
   if (imageFiles.value.length === 0) {
     MessagePlugin.warning('请上传至少一张商品图片')
     return
@@ -76,15 +103,36 @@ async function publish() {
     MessagePlugin.warning('请输入商品标题')
     return
   }
+  if (!price.value.trim()) {
+    MessagePlugin.warning('请输入价格')
+    return
+  }
+  if (Number(price.value) < 0) {
+    MessagePlugin.warning('价格不能为负数')
+    return
+  }
   if (!description.value.trim()) {
     MessagePlugin.warning('请输入商品描述')
     return
   }
-  if (!contact.value.trim()) {
-    MessagePlugin.warning('请填写联系方式')
+  // 联系方式至少填一项
+  if (!contactWechat.value.trim() && !contactQQ.value.trim() && !contactPhone.value.trim() && !contactOtherValue.value.trim()) {
+    MessagePlugin.warning('请至少填写一种联系方式')
+    return
+  }
+  // 其他方式如果填了值，类型也必须填
+  if (contactOtherValue.value.trim() && !contactOtherType.value.trim()) {
+    MessagePlugin.warning('请填写"其他"联系方式的类型（如：微博、钉钉等）')
     return
   }
 
+  // 拼接联系方式
+  const contacts = []
+  if (contactWechat.value.trim()) contacts.push('微信：' + contactWechat.value.trim())
+  if (contactQQ.value.trim()) contacts.push('QQ：' + contactQQ.value.trim())
+  if (contactPhone.value.trim()) contacts.push('电话：' + contactPhone.value.trim())
+  if (contactOtherValue.value.trim()) contacts.push(contactOtherType.value.trim() + '：' + contactOtherValue.value.trim())
+  const contactStr = contacts.join('\n')
 
   publishing.value = true
 
@@ -96,16 +144,19 @@ async function publish() {
       uploadedUrls.push(url)
     }
 
-    // 写入数据库（所有图片 URL 用逗号拼接存储）
+    // 写入数据库
     const { error } = await supabase.from('goods').insert({
       title: title.value.trim(),
-      price: Number(price.value) || null,
+      price: price.value ? Number(price.value) : null,
       category: categories[categoryIndex.value],
       condition: conditions[conditionIndex.value],
       description: description.value.trim(),
-      contact: contact.value.trim(),
+      contact: contactStr,
       campus: campuses[campusIndex.value],
+      seller: user.value.name,
       image: uploadedUrls.join(','),
+      user_id: user.value.id,
+      status: 'published',
     })
 
     if (error) throw error
@@ -186,18 +237,18 @@ function onCancel() {
 
       <!-- 价格 -->
       <div class="form-section">
-        <div class="form-label">价格（元）</div>
+        <div class="form-label">价格（元） <span class="form-required">*</span></div>
         <t-input
-          v-model="price"
-          type="number"
-          placeholder="输入价格，可面议可不填"
+          :value="price"
+          placeholder="输入价格（>=0，最多两位小数）"
           clearable
+          @change="onPriceChange"
         />
       </div>
 
       <!-- 分类 -->
       <div class="form-section">
-        <div class="form-label">商品分类</div>
+        <div class="form-label">商品分类 <span class="form-required">*</span></div>
         <div class="tag-row">
           <t-check-tag
             v-for="(cat, index) in categories"
@@ -214,7 +265,7 @@ function onCancel() {
 
       <!-- 成色 -->
       <div class="form-section">
-        <div class="form-label">成色</div>
+        <div class="form-label">成色 <span class="form-required">*</span></div>
         <div class="tag-row">
           <t-check-tag
             v-for="(cond, index) in conditions"
@@ -242,18 +293,27 @@ function onCancel() {
 
       <!-- 联系方式 -->
       <div class="form-section">
-        <div class="form-label">联系方式 <span class="form-required">*</span></div>
-        <t-input
-          v-model="contact"
-          placeholder="QQ号或微信号，方便买家联系你"
-          maxlength="50"
-          clearable
-        />
+        <div class="form-label">联系方式（至少填一项） <span class="form-required">*</span></div>
+        <div class="contact-grid">
+          <t-input v-model="contactWechat" placeholder="微信号" maxlength="50" clearable>
+            <template #prefix-icon><span class="contact-prefix">微信</span></template>
+          </t-input>
+          <t-input v-model="contactQQ" placeholder="QQ号" maxlength="50" clearable>
+            <template #prefix-icon><span class="contact-prefix">QQ</span></template>
+          </t-input>
+          <t-input v-model="contactPhone" placeholder="手机号" maxlength="50" clearable>
+            <template #prefix-icon><span class="contact-prefix">电话</span></template>
+          </t-input>
+          <div class="contact-other-row">
+            <t-input v-model="contactOtherType" placeholder="类型（如微博、钉钉）" maxlength="20" class="contact-other-type" />
+            <t-input v-model="contactOtherValue" placeholder="账号" maxlength="50" class="contact-other-value" />
+          </div>
+        </div>
       </div>
 
       <!-- 所在校区 -->
       <div class="form-section">
-        <div class="form-label">所在校区</div>
+        <div class="form-label">所在校区 <span class="form-required">*</span></div>
         <div class="tag-row">
           <t-check-tag
             v-for="(camp, index) in campuses"
@@ -398,5 +458,31 @@ function onCancel() {
 .image-add-text {
   font-size: 12px;
   color: #bbb;
+}
+
+.contact-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.contact-prefix {
+  font-size: 13px;
+  color: #999;
+  margin-right: 4px;
+}
+
+.contact-other-row {
+  display: flex;
+  gap: 8px;
+}
+
+.contact-other-type {
+  width: 130px;
+  flex-shrink: 0;
+}
+
+.contact-other-value {
+  flex: 1;
 }
 </style>

@@ -19,7 +19,7 @@ async function doSearch(keyword) {
   const { data: results } = await supabase
     .from('goods')
     .select('*')
-    .or(`title.ilike.%${kw}%,description.ilike.%${kw}%,category.ilike.%${kw}%,seller.ilike.%${kw}%,campus.ilike.%${kw}%`)
+    .or(`title.ilike.%${kw}%,description.ilike.%${kw}%,category.ilike.%${kw}%,seller.ilike.%${kw}%,campus.ilike.%${kw}%`).or('status.eq.published,status.is.null')
 
   searchValue.value = keyword
   isSearching.value = true
@@ -142,7 +142,6 @@ function onCardClick(id) {
             :key="word"
             variant="light"
             class="search-tag"
-            icon="search"
             @click="handleTagTap(word)"
           >
             {{ word }}

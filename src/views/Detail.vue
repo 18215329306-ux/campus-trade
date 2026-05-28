@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { MessagePlugin } from 'tdesign-vue-next'
 import { supabase } from '../supabase'
+import { user, initAuth } from '../stores/auth'
 
 const route = useRoute()
 const router = useRouter()
@@ -19,6 +20,7 @@ const images = computed(() => {
 })
 
 onMounted(async () => {
+  await initAuth()
   const id = route.params.id
   const { data } = await supabase
     .from('goods')
@@ -72,6 +74,51 @@ function onContact() {
   copyContact()
 }
 
+// 举报
+const showReport = ref(false)
+const reportReason = ref('')
+const reporting = ref(false)
+
+async function submitReport() {
+  if (!reportReason.value.trim()) return MessagePlugin.warning('请填写举报原因')
+  reporting.value = true
+  const { error } = await supabase.from('reports').insert({
+    reporter_id: user.value?.id,
+    reported_user_id: item.value?.user_id,
+    goods_id: item.value?.id,
+    reason: reportReason.value.trim(),
+  })
+  reporting.value = false
+  if (error) {
+    MessagePlugin.warning('举报失败')
+  } else {
+    MessagePlugin.success('举报已提交')
+    showReport.value = false
+    reportReason.value = ''
+  }
+}
+
+// 管理员操作
+const adminLoading = ref(false)
+
+async function adminRemoveGoods() {
+  adminLoading.value = true
+  const { error } = await supabase.from('goods').update({ status: 'cancelled' }).eq('id', item.value.id)
+  adminLoading.value = false
+  if (error) return MessagePlugin.warning('操作失败')
+  MessagePlugin.success('商品已下架')
+  item.value.status = 'cancelled'
+}
+
+async function adminBanUser() {
+  if (!item.value.user_id) return
+  adminLoading.value = true
+  const { error } = await supabase.from('users').update({ banned: true }).eq('id', item.value.user_id)
+  adminLoading.value = false
+  if (error) return MessagePlugin.warning('操作失败')
+  MessagePlugin.success('发布者已被封禁')
+}
+
 function goBack() {
   router.push('/')
 }
@@ -82,6 +129,14 @@ function goBack() {
     <t-loading size="medium" text="加载中..." />
   </div>
   <div v-else-if="item" class="detail-page">
+    <!-- 顶部返回 -->
+    <div class="detail-topbar">
+      <t-button variant="text" @click="goBack">
+        <t-icon name="chevron-left" size="24px" />
+        返回
+      </t-button>
+    </div>
+
     <!-- 商品图片 + 切换 -->
     <div class="detail-image-wrap">
       <div
@@ -128,6 +183,8 @@ function goBack() {
         <t-tag size="medium" variant="light" theme="primary">{{ item.category }}</t-tag>
         <t-tag size="medium" variant="light" theme="warning">{{ item.condition }}</t-tag>
         <t-tag size="medium" variant="light" theme="default">{{ item.campus }}</t-tag>
+        <t-tag v-if="item.status === 'sold'" size="medium" variant="light" theme="danger">已成交</t-tag>
+        <t-tag v-else-if="item.status === 'cancelled'" size="medium" variant="light" theme="default">已取消</t-tag>
       </div>
       <div class="detail-price-row">
         <span class="detail-price">¥{{ item.price }}</span>
@@ -144,8 +201,10 @@ function goBack() {
       <div class="seller-info">
         <div class="seller-name">{{ item.seller }}</div>
         <div class="seller-contact">
-          <span class="label">联系方式：</span>
-          <span class="value">{{ item.contact }}</span>
+          <div class="label">联系方式：</div>
+          <div class="contact-lines">
+            <div v-for="(line, i) in (item.contact || '').split('\n').filter(Boolean)" :key="i" class="value">{{ line }}</div>
+          </div>
         </div>
         <div class="seller-campus">
           <t-icon name="location" size="14px" style="color: #999" />
@@ -165,8 +224,27 @@ function goBack() {
 
     <!-- 底部操作栏 -->
     <div class="detail-footer">
+      <t-button variant="text" size="small" theme="danger" @click="showReport = true">举报</t-button>
       <t-button variant="outline" size="large" @click="copyContact">复制联系方式</t-button>
       <t-button theme="primary" size="large" @click="onContact">联系卖家</t-button>
+    </div>
+
+    <!-- 管理员操作 -->
+    <div v-if="user?.role === 'admin'" class="detail-admin-bar">
+      <t-button theme="danger" variant="outline" size="large" block :loading="adminLoading" @click="adminRemoveGoods">下架该商品</t-button>
+      <t-button v-if="item.user_id" theme="danger" size="large" block :loading="adminLoading" @click="adminBanUser">封禁发布者</t-button>
+    </div>
+
+    <!-- 举报弹窗 -->
+    <div v-if="showReport" class="report-overlay" @click.self="showReport = false">
+      <div class="report-card">
+        <h4>举报此商品</h4>
+        <t-textarea v-model="reportReason" placeholder="请描述举报原因..." :autosize="{ minRows: 3 }" />
+        <div class="report-btns">
+          <t-button variant="outline" @click="showReport = false">取消</t-button>
+          <t-button theme="danger" :loading="reporting" @click="submitReport">提交举报</t-button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -200,6 +278,14 @@ function goBack() {
   min-height: 100vh;
   background: #f5f5f5;
   padding-bottom: 80px;
+}
+
+.detail-topbar {
+  padding: 8px 8px;
+  background: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 /* 图片区域 */
@@ -383,6 +469,13 @@ function goBack() {
 
 .seller-contact .label {
   color: #999;
+  margin-bottom: 4px;
+}
+
+.contact-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .seller-contact .value {
@@ -422,6 +515,19 @@ function goBack() {
 
 .detail-footer .t-button {
   flex: 1;
+}
+
+.detail-admin-bar {
+  position: fixed;
+  bottom: 68px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 1120px;
+  width: 100%;
+  display: flex;
+  gap: 8px;
+  padding: 8px 16px;
+  z-index: 50;
 }
 
 .loading-page {
@@ -515,5 +621,39 @@ function goBack() {
 
 .fullscreen-arrow--right {
   right: 16px;
+}
+
+/* 举报弹窗 */
+.report-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.report-card {
+  width: 100%;
+  max-width: 360px;
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.report-card h4 {
+  font-size: 17px;
+  color: #333;
+}
+
+.report-btns {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
 }
 </style>

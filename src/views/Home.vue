@@ -27,6 +27,7 @@ async function fetchGoods() {
   const { data, error } = await supabase
     .from('goods')
     .select('*')
+    .or('status.eq.published,status.is.null')
     .order('created_at', { ascending: false })
   if (!error && data) {
     allCards.value = data
