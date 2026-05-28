@@ -178,10 +178,9 @@ function onCardClick(id) {
 }
 
 .search-card-list {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: 12px 16px;
-  justify-content: space-between;
 }
 
 .search-empty {
