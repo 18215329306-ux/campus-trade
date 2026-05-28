@@ -1,5 +1,7 @@
 <script setup>
-defineProps({
+import { computed } from 'vue'
+
+const props = defineProps({
   id: Number,
   image: String,
   title: String,
@@ -9,13 +11,19 @@ defineProps({
   seller: String,
 })
 
+// 取第一张图片（多张图用逗号分隔时只显示第一张）
+const firstImage = computed(() => {
+  if (!props.image) return ''
+  return props.image.includes(',') ? props.image.split(',')[0] : props.image
+})
+
 const emit = defineEmits(['click'])
 </script>
 
 <template>
   <div class="product-card" @click="emit('click', id)">
     <div class="product-card__image-wrap">
-      <img :src="image" :alt="title" class="product-card__image" />
+      <img :src="firstImage" :alt="title" class="product-card__image" />
       <div class="product-card__price">¥{{ price }}</div>
     </div>
     <div class="product-card__info">
@@ -40,6 +48,19 @@ const emit = defineEmits(['click'])
   cursor: pointer;
 }
 
+/* 大屏幕显示 4 列 */
+@media (min-width: 768px) {
+  .product-card {
+    width: calc(33.33% - 12px);
+  }
+}
+
+@media (min-width: 1024px) {
+  .product-card {
+    width: calc(25% - 14px);
+  }
+}
+
 .product-card:active {
   transform: scale(0.97);
 }
@@ -57,7 +78,8 @@ const emit = defineEmits(['click'])
   left: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  background: #fff;
 }
 
 .product-card__price {

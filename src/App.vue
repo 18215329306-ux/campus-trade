@@ -46,7 +46,7 @@ export default {
 
 <style scoped>
 .app-shell {
-  max-width: 480px;
+  max-width: 1200px;
   margin: 0 auto;
   min-height: 100vh;
   background: #f5f5f5;
@@ -59,7 +59,7 @@ export default {
   bottom: 0;
   left: 50%;
   transform: translateX(-50%);
-  max-width: 480px;
+  max-width: 1200px;
   width: 100%;
   background: #fff;
   border-top: 1px solid #eee;

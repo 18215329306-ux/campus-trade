@@ -64,7 +64,8 @@ function handleClearHistory() {
 }
 
 function onCardClick(id) {
-  router.push(`/detail/${id}`)
+  const url = router.resolve(`/detail/${id}`).href
+  window.open(url, '_blank')
 }
 </script>
 
