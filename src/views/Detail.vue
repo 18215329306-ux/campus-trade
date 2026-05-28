@@ -19,15 +19,13 @@ const images = computed(() => {
 })
 
 onMounted(async () => {
-  const id = parseInt(route.params.id, 10)
-  const { data, error } = await supabase
+  const id = route.params.id
+  const { data } = await supabase
     .from('goods')
     .select('*')
     .eq('id', id)
     .single()
-  if (!error && data) {
-    item.value = data
-  }
+  item.value = data || null
   loading.value = false
 })
 
@@ -41,7 +39,6 @@ function nextImage() {
   else activeImageIndex.value = 0
 }
 
-// 触摸滑动
 function onTouchStart(e) {
   touchStartX = e.touches[0].clientX
 }
@@ -187,7 +184,6 @@ function goBack() {
       <div class="fullscreen-counter" v-if="images.length > 1">
         {{ activeImageIndex + 1 }} / {{ images.length }}
       </div>
-      <!-- 全屏左右箭头 -->
       <div v-if="images.length > 1" class="fullscreen-arrow fullscreen-arrow--left" @click.stop="prevImage">
         <t-icon name="chevron-left" size="36px" />
       </div>
@@ -275,7 +271,6 @@ function goBack() {
   right: 12px;
 }
 
-/* 鼠标设备才显示箭头 */
 @media (hover: hover) and (pointer: fine) {
   .detail-arrow {
     display: flex;
@@ -415,7 +410,7 @@ function goBack() {
   bottom: 0;
   left: 50%;
   transform: translateX(-50%);
-  max-width: 1200px;
+  max-width: 1120px;
   width: 100%;
   display: flex;
   gap: 12px;

@@ -46,7 +46,8 @@ export default {
 
 <style scoped>
 .app-shell {
-  max-width: 1200px;
+  width: 100%;
+  max-width: 480px;
   margin: 0 auto;
   min-height: 100vh;
   background: #f5f5f5;
@@ -54,15 +55,39 @@ export default {
   padding-bottom: 56px;
 }
 
+@media (min-width: 768px) {
+  .app-shell {
+    max-width: 960px;
+  }
+}
+
+@media (min-width: 1200px) {
+  .app-shell {
+    max-width: 1120px;
+  }
+}
+
 .app-tabbar {
   position: fixed;
   bottom: 0;
   left: 50%;
   transform: translateX(-50%);
-  max-width: 1200px;
   width: 100%;
+  max-width: 480px;
   background: #fff;
   border-top: 1px solid #eee;
   z-index: 100;
+}
+
+@media (min-width: 768px) {
+  .app-tabbar {
+    max-width: 960px;
+  }
+}
+
+@media (min-width: 1200px) {
+  .app-tabbar {
+    max-width: 1120px;
+  }
 }
 </style>

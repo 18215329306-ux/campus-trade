@@ -39,7 +39,6 @@ const emit = defineEmits(['click'])
 
 <style scoped>
 .product-card {
-  width: calc(50% - 8px);
   border-radius: 12px;
   overflow: hidden;
   background: #fff;

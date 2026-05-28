@@ -18,8 +18,12 @@ const categories = [
 const activeCategory = ref('all')
 const allCards = ref([])
 const loading = ref(true)
+const refreshing = ref(false)
+const pullDistance = ref(0)
+let touchStartY = 0
+let isPulling = false
 
-onMounted(async () => {
+async function fetchGoods() {
   const { data, error } = await supabase
     .from('goods')
     .select('*')
@@ -28,7 +32,38 @@ onMounted(async () => {
     allCards.value = data
   }
   loading.value = false
+}
+
+onMounted(() => {
+  fetchGoods()
 })
+
+function onTouchStart(e) {
+  if (window.scrollY === 0) {
+    touchStartY = e.touches[0].clientY
+    isPulling = true
+  }
+}
+
+function onTouchMove(e) {
+  if (!isPulling) return
+  const diff = e.touches[0].clientY - touchStartY
+  if (diff > 0) {
+    pullDistance.value = Math.min(diff * 0.4, 60)
+  }
+}
+
+async function onTouchEnd() {
+  if (!isPulling) return
+  isPulling = false
+  if (pullDistance.value >= 50) {
+    refreshing.value = true
+    pullDistance.value = 40
+    await fetchGoods()
+    refreshing.value = false
+  }
+  pullDistance.value = 0
+}
 
 const filteredCards = computed(() => {
   if (activeCategory.value === 'all') return allCards.value
@@ -77,7 +112,18 @@ function goRelease() {
     </div>
 
     <!-- 商品列表 -->
-    <div class="home-content">
+    <div
+      class="home-content"
+      @touchstart="onTouchStart"
+      @touchmove="onTouchMove"
+      @touchend="onTouchEnd"
+    >
+      <!-- 下拉刷新指示器 -->
+      <div class="refresh-indicator" :style="{ height: pullDistance + 'px' }">
+        <t-loading v-if="refreshing" size="20px" />
+        <span v-else class="refresh-indicator__text">{{ pullDistance >= 50 ? '松开刷新' : '下拉刷新' }}</span>
+      </div>
+
       <div v-if="loading" class="home-loading">
         <t-loading size="medium" text="加载中..." />
       </div>
@@ -180,11 +226,23 @@ function goRelease() {
   padding: 12px 16px;
 }
 
-.home-card-list {
+.refresh-indicator {
   display: flex;
-  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  transition: height 0.2s;
+}
+
+.refresh-indicator__text {
+  font-size: 13px;
+  color: #999;
+}
+
+.home-card-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: 12px 16px;
-  justify-content: space-between;
 }
 
 .home-loading {
@@ -210,13 +268,7 @@ function goRelease() {
 .home-release {
   position: fixed;
   bottom: 80px;
-  right: calc(50% - 580px);
+  right: 20px;
   z-index: 50;
-}
-
-@media (max-width: 1240px) {
-  .home-release {
-    right: 20px;
-  }
 }
 </style>

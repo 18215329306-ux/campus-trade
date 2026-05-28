@@ -16,15 +16,14 @@ async function doSearch(keyword) {
   if (!keyword || !keyword.trim()) return
 
   const kw = keyword.trim()
-
-  const { data, error } = await supabase
+  const { data: results } = await supabase
     .from('goods')
     .select('*')
-    .or(`title.ilike.%${kw}%,description.ilike.%${kw}%,category.ilike.%${kw}%`)
+    .or(`title.ilike.%${kw}%,description.ilike.%${kw}%,category.ilike.%${kw}%,seller.ilike.%${kw}%,campus.ilike.%${kw}%`)
 
   searchValue.value = keyword
   isSearching.value = true
-  searchResults.value = error ? [] : data
+  searchResults.value = results || []
   addHistory(keyword)
 }
 
@@ -180,10 +179,9 @@ function onCardClick(id) {
 }
 
 .search-card-list {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: 12px 16px;
-  justify-content: space-between;
 }
 
 .search-empty {
