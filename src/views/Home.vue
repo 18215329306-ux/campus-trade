@@ -75,7 +75,8 @@ function onCategoryChange(value) {
 }
 
 function onCardClick(id) {
-  router.push(`/detail/${id}`)
+  const url = router.resolve(`/detail/${id}`).href
+  window.open(url, '_blank')
 }
 
 function goSearch() {
@@ -122,7 +123,11 @@ function goRelease() {
         <t-loading v-if="refreshing" size="20px" />
         <span v-else class="refresh-indicator__text">{{ pullDistance >= 50 ? '松开刷新' : '下拉刷新' }}</span>
       </div>
-      <div v-if="filteredCards.length > 0" class="home-card-list">
+
+      <div v-if="loading" class="home-loading">
+        <t-loading size="medium" text="加载中..." />
+      </div>
+      <div v-else-if="filteredCards.length > 0" class="home-card-list">
         <ProductCard
           v-for="item in filteredCards"
           :key="item.id"
@@ -240,6 +245,12 @@ function goRelease() {
   gap: 12px 16px;
 }
 
+.home-loading {
+  display: flex;
+  justify-content: center;
+  padding-top: 120px;
+}
+
 .home-empty {
   display: flex;
   flex-direction: column;
@@ -257,13 +268,7 @@ function goRelease() {
 .home-release {
   position: fixed;
   bottom: 80px;
-  right: calc(50% - 220px);
+  right: 20px;
   z-index: 50;
-}
-
-@media (max-width: 480px) {
-  .home-release {
-    right: 16px;
-  }
 }
 </style>
