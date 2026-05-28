@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { MessagePlugin } from 'tdesign-vue-next'
+import { supabase } from '../supabase'
 
 const router = useRouter()
 
@@ -10,6 +11,7 @@ const price = ref('')
 const description = ref('')
 const contact = ref('')
 const uploadFiles = ref([])
+const publishing = ref(false)
 
 const categories = ['书籍', '电子', '生活', '衣物', '其他']
 const categoryIndex = ref(0)
@@ -24,7 +26,24 @@ function handleUploadChange(files) {
   uploadFiles.value = files
 }
 
-function publish() {
+async function uploadImage(file) {
+  // file.raw 是 TDesign Upload 组件的原始 File 对象
+  const rawFile = file.raw || file
+  const fileName = `${Date.now()}_${rawFile.name || 'image.jpg'}`
+  const { data, error } = await supabase.storage
+    .from('goods-images')
+    .upload(fileName, rawFile)
+
+  if (error) throw error
+
+  const { data: urlData } = supabase.storage
+    .from('goods-images')
+    .getPublicUrl(data.path)
+
+  return urlData.publicUrl
+}
+
+async function publish() {
   if (!title.value.trim()) {
     MessagePlugin.warning('请输入商品标题')
     return
@@ -38,23 +57,39 @@ function publish() {
     return
   }
 
-  const goodsData = {
-    title: title.value.trim(),
-    price: price.value || '面议',
-    category: categories[categoryIndex.value],
-    condition: conditions[conditionIndex.value],
-    description: description.value.trim(),
-    contact: contact.value.trim(),
-    campus: campuses[campusIndex.value],
-    images: uploadFiles.value.map(f => f.url || f.name),
-    createdAt: new Date().toISOString(),
-  }
+  publishing.value = true
 
-  console.log('发布数据：', goodsData)
-  MessagePlugin.success('发布成功')
-  setTimeout(() => {
-    router.push('/')
-  }, 1200)
+  try {
+    // 先上传图片
+    let imageUrl = '/images/card0.png' // 默认图
+    if (uploadFiles.value.length > 0) {
+      imageUrl = await uploadImage(uploadFiles.value[0])
+    }
+
+    // 写入数据库
+    const { error } = await supabase.from('goods').insert({
+      title: title.value.trim(),
+      price: Number(price.value) || null,
+      category: categories[categoryIndex.value],
+      condition: conditions[conditionIndex.value],
+      description: description.value.trim(),
+      contact: contact.value.trim(),
+      campus: campuses[campusIndex.value],
+      image: imageUrl,
+    })
+
+    if (error) throw error
+
+    MessagePlugin.success('发布成功')
+    setTimeout(() => {
+      router.push('/')
+    }, 1200)
+  } catch (e) {
+    MessagePlugin.warning('发布失败，请重试')
+    console.error(e)
+  } finally {
+    publishing.value = false
+  }
 }
 
 function onCancel() {
@@ -182,7 +217,7 @@ function onCancel() {
 
       <!-- 发布按钮 -->
       <div class="form-submit">
-        <t-button theme="primary" size="large" block @click="publish">发布商品</t-button>
+        <t-button theme="primary" size="large" block :loading="publishing" @click="publish">发布商品</t-button>
       </div>
     </div>
   </div>

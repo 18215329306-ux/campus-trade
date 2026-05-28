@@ -1,7 +1,7 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import cardsData from '../mock/cardsData.js'
+import { supabase } from '../supabase'
 import ProductCard from '../components/ProductCard.vue'
 
 const router = useRouter()
@@ -12,23 +12,19 @@ const searchResults = ref([])
 const historyWords = ref([])
 const popularWords = ref(['高等数学', 'iPad', '键盘', '考研', '台灯', '吉他', '篮球', '充电宝'])
 
-function doSearch(keyword) {
+async function doSearch(keyword) {
   if (!keyword || !keyword.trim()) return
 
-  const kw = keyword.trim().toLowerCase()
-  const results = cardsData.filter(item => {
-    return (
-      item.title.toLowerCase().includes(kw) ||
-      item.category.toLowerCase().includes(kw) ||
-      item.description.toLowerCase().includes(kw) ||
-      item.seller.toLowerCase().includes(kw) ||
-      item.campus.toLowerCase().includes(kw)
-    )
-  })
+  const kw = keyword.trim()
+
+  const { data, error } = await supabase
+    .from('goods')
+    .select('*')
+    .or(`title.ilike.%${kw}%,description.ilike.%${kw}%,category.ilike.%${kw}%`)
 
   searchValue.value = keyword
   isSearching.value = true
-  searchResults.value = results
+  searchResults.value = error ? [] : data
   addHistory(keyword)
 }
 
