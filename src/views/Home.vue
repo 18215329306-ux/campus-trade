@@ -241,8 +241,26 @@ function goRelease() {
 
 .home-card-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  grid-template-columns: repeat(2, 1fr);
   gap: 12px 16px;
+}
+
+@media (min-width: 600px) {
+  .home-card-list {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 900px) {
+  .home-card-list {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (min-width: 1200px) {
+  .home-card-list {
+    grid-template-columns: repeat(5, 1fr);
+  }
 }
 
 .home-loading {

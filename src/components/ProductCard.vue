@@ -47,19 +47,6 @@ const emit = defineEmits(['click'])
   cursor: pointer;
 }
 
-/* 大屏幕显示 4 列 */
-@media (min-width: 768px) {
-  .product-card {
-    width: calc(33.33% - 12px);
-  }
-}
-
-@media (min-width: 1024px) {
-  .product-card {
-    width: calc(25% - 14px);
-  }
-}
-
 .product-card:active {
   transform: scale(0.97);
 }
