@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { MessagePlugin } from 'tdesign-vue-next'
+import { supabase } from '../supabase'
 
 const router = useRouter()
 
@@ -24,7 +25,7 @@ function handleUploadChange(files) {
   uploadFiles.value = files
 }
 
-function publish() {
+async function publish() {
   if (!title.value.trim()) {
     MessagePlugin.warning('请输入商品标题')
     return
@@ -38,23 +39,47 @@ function publish() {
     return
   }
 
-  const goodsData = {
+  let imageUrl = '/images/card0.png'
+
+  if (uploadFiles.value.length > 0) {
+    const file = uploadFiles.value[0]
+    if (file.raw) {
+      const fileName = `${Date.now()}_${file.name}`
+      const { error: uploadError } = await supabase.storage
+        .from('goods-images')
+        .upload(fileName, file.raw)
+
+      if (uploadError) {
+        MessagePlugin.warning('图片上传失败：' + uploadError.message)
+        return
+      }
+
+      const { data: urlData } = supabase.storage
+        .from('goods-images')
+        .getPublicUrl(fileName)
+      imageUrl = urlData.publicUrl
+    }
+  }
+
+  const { error } = await supabase.from('goods').insert({
     title: title.value.trim(),
-    price: price.value || '面议',
+    price: price.value || null,
     category: categories[categoryIndex.value],
     condition: conditions[conditionIndex.value],
     description: description.value.trim(),
     contact: contact.value.trim(),
     campus: campuses[campusIndex.value],
-    images: uploadFiles.value.map(f => f.url || f.name),
-    createdAt: new Date().toISOString(),
-  }
+    image: imageUrl,
+  })
 
-  console.log('发布数据：', goodsData)
-  MessagePlugin.success('发布成功')
-  setTimeout(() => {
-    router.push('/')
-  }, 1200)
+  if (error) {
+    MessagePlugin.warning('发布失败，请重试')
+  } else {
+    MessagePlugin.success('发布成功')
+    setTimeout(() => {
+      router.push('/')
+    }, 1200)
+  }
 }
 
 function onCancel() {
