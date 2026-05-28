@@ -2,15 +2,20 @@
 import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { MessagePlugin } from 'tdesign-vue-next'
-import cardsData from '../mock/cardsData.js'
+import { supabase } from '../supabase'
 
 const route = useRoute()
 const router = useRouter()
 const item = ref(null)
 
-onMounted(() => {
-  const id = parseInt(route.params.id, 10)
-  item.value = cardsData.find(card => card.id === id) || null
+onMounted(async () => {
+  const id = route.params.id
+  const { data } = await supabase
+    .from('goods')
+    .select('*')
+    .eq('id', id)
+    .single()
+  item.value = data || null
 })
 
 function copyContact() {
@@ -50,7 +55,7 @@ function goBack() {
       </div>
       <div class="detail-price-row">
         <span class="detail-price">¥{{ item.price }}</span>
-        <span class="detail-date">发布于 {{ item.createdAt }}</span>
+        <span class="detail-date">发布于 {{ item.created_at }}</span>
       </div>
     </div>
 
