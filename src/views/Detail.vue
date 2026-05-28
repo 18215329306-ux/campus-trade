@@ -232,14 +232,26 @@ function goBack() {
   bottom: 0;
   left: 50%;
   transform: translateX(-50%);
-  max-width: 480px;
   width: 100%;
+  max-width: 480px;
   display: flex;
   gap: 12px;
   padding: 12px 16px;
   background: #fff;
   border-top: 1px solid #eee;
   z-index: 50;
+}
+
+@media (min-width: 768px) {
+  .detail-footer {
+    max-width: 960px;
+  }
+}
+
+@media (min-width: 1200px) {
+  .detail-footer {
+    max-width: 1120px;
+  }
 }
 
 .detail-footer .t-button {
