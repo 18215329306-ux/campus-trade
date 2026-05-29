@@ -17,19 +17,21 @@ async function doSearch(keyword) {
   if (!keyword || !keyword.trim()) return
 
   const kw = keyword.trim()
-  // 获取同校用户ID
+  // 非管理员只看同校商品，管理员看全部
+  const isAdmin = currentUser.value?.role === 'admin'
+
   let schoolUserIds = []
-  if (currentUser.value?.school) {
+  if (!isAdmin && currentUser.value?.school) {
     const { data: schoolUsers } = await supabase
       .from('users').select('id').eq('school', currentUser.value.school)
     schoolUserIds = (schoolUsers || []).map(u => u.id)
   }
-  
+
   let query = supabase
     .from('goods')
     .select('*')
     .or(`title.ilike.%${kw}%,description.ilike.%${kw}%,category.ilike.%${kw}%,seller.ilike.%${kw}%,campus.ilike.%${kw}%`).or('status.eq.published,status.is.null')
-  if (schoolUserIds.length > 0) {
+  if (!isAdmin && schoolUserIds.length > 0) {
     query = query.in('user_id', schoolUserIds)
   }
   // 排除被封禁用户的商品

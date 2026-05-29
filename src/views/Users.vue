@@ -33,8 +33,8 @@ async function fetchUsers() {
     query = query.neq('banned', true)
   }
   
-  // 同校过滤
-  if (user.value?.school) {
+  // 同校过滤（管理员看全部）
+  if (user.value?.school && user.value.role !== 'admin') {
     query = query.eq('school', user.value.school)
   }
   
