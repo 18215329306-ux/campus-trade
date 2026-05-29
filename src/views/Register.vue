@@ -82,7 +82,7 @@ async function handleRegister() {
   if (!phone.value.trim()) return MessagePlugin.warning('请输入联系电话')
   if (!/^\d{11}$/.test(phone.value.trim())) return MessagePlugin.warning('请输入正确的11位手机号')
   if (!school.value) return MessagePlugin.warning('请选择学校')
-  if (!agreed.value) return MessagePlugin.warning('请先阅读并同意平台规范')
+  if (!agreed.value) return MessagePlugin.warning('请先阅读并同意校园二手交易信息平台规范')
   if (!name.value.trim()) return MessagePlugin.warning('请输入用户名')
 
   loading.value = true
@@ -136,7 +136,7 @@ function closeSuccess() {
         />
         <t-input v-model="name" placeholder="用户名" clearable size="large" />
 
-        <div class="rules-check"><t-checkbox v-model="agreed">我已阅读并同意<span class="rules-link" @click.stop="showRules = true">《平台规范》</span></t-checkbox></div>
+        <div class="rules-check"><t-checkbox v-model="agreed">我已阅读并同意<span class="rules-link" @click.stop="showRules = true">《校园二手交易信息平台规范》</span></t-checkbox></div>
         <t-button theme="primary" size="large" block :loading="loading" @click="handleRegister">
           注册
         </t-button>

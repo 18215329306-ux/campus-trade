@@ -25,7 +25,7 @@ const resetStep = ref(1) // 1=验证身份, 2=设置新密码
 
 async function handleLogin() {
   if (!username.value.trim()) return MessagePlugin.warning('请输入账号')
-  if (!agreed.value) return MessagePlugin.warning('请先阅读并同意平台规范')
+  if (!agreed.value) return MessagePlugin.warning('请先阅读并同意校园二手交易信息平台规范')
   if (!password.value) return MessagePlugin.warning('请输入密码')
 
   loading.value = true
@@ -114,7 +114,7 @@ async function handleResetPassword() {
         <t-input v-model="password" type="password" placeholder="密码" clearable size="large"
           @enter="handleLogin" />
 
-        <div class="rules-check"><t-checkbox v-model="agreed">我已阅读并同意<span class="rules-link" @click.stop="showRules = true">《平台规范》</span></t-checkbox></div>
+        <div class="rules-check"><t-checkbox v-model="agreed">我已阅读并同意<span class="rules-link" @click.stop="showRules = true">《校园二手交易信息平台规范》</span></t-checkbox></div>
         <t-button theme="primary" size="large" block :loading="loading" @click="handleLogin">
           登录
         </t-button>
