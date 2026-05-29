@@ -27,9 +27,6 @@ const categoryIndex = ref(0)
 const conditions = ['全新', '九成新', '八成新', '七成新', '六成新及以下']
 const conditionIndex = ref(1)
 
-const campuses = ['北校区', '南校区', '东校区', '西校区']
-const campusIndex = ref(0)
-
 // 价格输入校验：>=0，最多两位小数
 function onPriceChange(val) {
   // 移除非数字和小数点
@@ -125,6 +122,11 @@ async function publish() {
     MessagePlugin.warning('请填写"其他"联系方式的类型（如：微博、钉钉等）')
     return
   }
+  // 手机号必须为11位数字
+  if (contactPhone.value.trim() && !/^\d{11}$/.test(contactPhone.value.trim())) {
+    MessagePlugin.warning('手机号必须为11位数字')
+    return
+  }
 
   // 拼接联系方式
   const contacts = []
@@ -152,7 +154,7 @@ async function publish() {
       condition: conditions[conditionIndex.value],
       description: description.value.trim(),
       contact: contactStr,
-      campus: campuses[campusIndex.value],
+      campus: user.value.school || '',
       seller: user.value.name,
       image: uploadedUrls.join(','),
       user_id: user.value.id,
@@ -188,7 +190,7 @@ function onCancel() {
     <!-- 顶部导航 -->
     <div class="release-header">
       <t-button variant="text" @click="onCancel">取消</t-button>
-      <span class="release-header__title">发布二手商品</span>
+      <span class="release-header__title">发布商品</span>
       <div style="width: 60px"></div>
     </div>
 
@@ -296,35 +298,24 @@ function onCancel() {
         <div class="form-label">联系方式（至少填一项） <span class="form-required">*</span></div>
         <div class="contact-grid">
           <t-input v-model="contactWechat" placeholder="微信号" maxlength="50" clearable>
-            <template #prefix-icon><span class="contact-prefix">微信</span></template>
+            <template #prefix-icon><span class="contact-prefix">微信</span>
+    
+</template>
           </t-input>
           <t-input v-model="contactQQ" placeholder="QQ号" maxlength="50" clearable>
-            <template #prefix-icon><span class="contact-prefix">QQ</span></template>
+            <template #prefix-icon><span class="contact-prefix">QQ</span>
+    
+</template>
           </t-input>
-          <t-input v-model="contactPhone" placeholder="手机号" maxlength="50" clearable>
-            <template #prefix-icon><span class="contact-prefix">电话</span></template>
+          <t-input v-model="contactPhone" placeholder="11位手机号" maxlength="11" clearable>
+            <template #prefix-icon><span class="contact-prefix">电话</span>
+    
+</template>
           </t-input>
           <div class="contact-other-row">
             <t-input v-model="contactOtherType" placeholder="类型（如微博、钉钉）" maxlength="20" class="contact-other-type" />
             <t-input v-model="contactOtherValue" placeholder="账号" maxlength="50" class="contact-other-value" />
           </div>
-        </div>
-      </div>
-
-      <!-- 所在校区 -->
-      <div class="form-section">
-        <div class="form-label">所在校区 <span class="form-required">*</span></div>
-        <div class="tag-row">
-          <t-check-tag
-            v-for="(camp, index) in campuses"
-            :key="camp"
-            :checked="campusIndex === index"
-            size="medium"
-            variant="dark"
-            @click="campusIndex = index"
-          >
-            {{ camp }}
-          </t-check-tag>
         </div>
       </div>
 
@@ -334,6 +325,10 @@ function onCancel() {
       </div>
     </div>
   </div>
+
+    
+
+    <div class="app-version">版本 1.0</div>
 </template>
 
 <style scoped>
@@ -484,5 +479,12 @@ function onCancel() {
 
 .contact-other-value {
   flex: 1;
+}
+
+.app-version {
+  text-align: center;
+  padding: 16px;
+  font-size: 11px;
+  color: #ccc;
 }
 </style>

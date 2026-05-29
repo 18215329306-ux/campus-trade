@@ -11,6 +11,14 @@ export async function initAuth() {
     try { user.value = JSON.parse(saved) } catch {}
   }
   skipped.value = localStorage.getItem('campus_skipped') === '1'
+  // 从数据库获取最新信誉分
+  if (user.value) {
+    try {
+      const { supabase } = await import('../supabase')
+      const { data } = await supabase.from('users').select('reputation').eq('id', user.value.id).single()
+      if (data) user.value.reputation = data.reputation
+    } catch {}
+  }
   authReady.value = true
 }
 
@@ -34,13 +42,28 @@ export async function signUp(username, password, school, name, phone) {
     .eq('username', username)
     .single()
 
-  if (existing) return { error: { message: '账号名已存在' } }
+  if (existing) return { error: { message: '账号已存在' } }
+
+  const { data: existingName } = await supabase
+    .from('users')
+    .select('id')
+    .eq('name', name)
+    .single()
+
+  if (existingName) return { error: { message: '用户名已被使用' } }
+
+  const { count: phoneCount } = await supabase
+    .from('users')
+    .select('*', { count: 'exact', head: true })
+    .eq('phone', phone)
+
+  if (phoneCount >= 3) return { error: { message: '该手机号已注册超过3个账号' } }
 
   const passwordHash = await hashPassword(password)
   const { data, error } = await supabase
     .from('users')
     .insert({ username, password_hash: passwordHash, school, name, phone })
-    .select('id, username, school, name, phone, role, banned')
+    .select('id, username, school, name, phone, role, banned, created_at')
     .single()
 
   if (error) return { error }
@@ -49,6 +72,8 @@ export async function signUp(username, password, school, name, phone) {
   skipped.value = false
   localStorage.setItem('campus_user', JSON.stringify(data))
   localStorage.removeItem('campus_skipped')
+  // 默认关注自己
+  await supabase.from('follows').insert({ follower_id: data.id, following_id: data.id })
   return { data }
 }
 
@@ -57,7 +82,7 @@ export async function signIn(username, password) {
   // 先查用户是否存在
   const { data: existUser } = await supabase
     .from('users')
-    .select('id, username, school, name, phone, role, banned')
+    .select('id, username, school, name, phone, role, banned, created_at')
     .eq('username', username)
     .single()
 
@@ -94,6 +119,24 @@ export async function verifyPhone(username, phone) {
     .select('id')
     .eq('username', username)
     .eq('phone', phone)
+    .single()
+  return !!data
+}
+
+// 验证当前密码
+export async function verifyPassword(username, password) {
+  const passwordHash = await hashPassword(password)
+  const storedHash = await getStoredHash(username)
+  return passwordHash === storedHash
+}
+
+// 验证用户名
+export async function verifyName(username, name) {
+  const { data } = await supabase
+    .from('users')
+    .select('id')
+    .eq('username', username)
+    .eq('name', name)
     .single()
   return !!data
 }

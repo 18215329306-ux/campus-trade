@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { supabase } from '../supabase'
+import { user as currentUser } from '../stores/auth'
 import ProductCard from '../components/ProductCard.vue'
 
 const router = useRouter()
@@ -24,11 +25,27 @@ let touchStartY = 0
 let isPulling = false
 
 async function fetchGoods() {
-  const { data, error } = await supabase
+  // 获取同校用户ID
+  let schoolUserIds = []
+  if (currentUser.value?.school) {
+    const { data: schoolUsers } = await supabase
+      .from('users').select('id').eq('school', currentUser.value.school)
+    schoolUserIds = (schoolUsers || []).map(u => u.id)
+  }
+  
+  let query = supabase
     .from('goods')
     .select('*')
     .or('status.eq.published,status.is.null')
-    .order('created_at', { ascending: false })
+  if (schoolUserIds.length > 0) {
+    query = query.in('user_id', schoolUserIds)
+  }
+  // 排除被封禁用户的商品
+  const { data: bannedUsers } = await supabase.from('users').select('id').eq('banned', true)
+  if (bannedUsers && bannedUsers.length > 0) {
+    query = query.not('user_id', 'in', '(' + bannedUsers.map(u => u.id).join(',') + ')')
+  }
+  const { data, error } = await query.order('created_at', { ascending: false })
   if (!error && data) {
     allCards.value = data
   }
@@ -37,6 +54,7 @@ async function fetchGoods() {
 
 onMounted(() => {
   fetchGoods()
+  supabase.from('visit_logs').insert({ page: 'home' }).then(() => {})
 })
 
 function onTouchStart(e) {
@@ -151,11 +169,17 @@ function goRelease() {
     <!-- 浮动发布按钮 -->
     <div class="home-release">
       <t-button theme="primary" size="large" shape="round" @click="goRelease">
-        <template #icon><t-icon name="add" /></template>
+        <template #icon><t-icon name="add" />
+    
+</template>
         发布
       </t-button>
     </div>
   </div>
+
+    
+
+    <div class="app-version">版本 1.0</div>
 </template>
 
 <style scoped>
@@ -289,5 +313,12 @@ function goRelease() {
   bottom: 80px;
   right: 20px;
   z-index: 50;
+}
+
+.app-version {
+  text-align: center;
+  padding: 16px;
+  font-size: 11px;
+  color: #ccc;
 }
 </style>

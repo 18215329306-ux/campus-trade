@@ -2,7 +2,8 @@
 import { ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { MessagePlugin } from 'tdesign-vue-next'
-import { signIn, skipLogin, verifyPhone, resetPassword } from '../stores/auth'
+import { signIn, skipLogin, verifyPhone, verifyName, resetPassword } from '../stores/auth'
+import { rulesContent } from '../rules'
 
 const router = useRouter()
 const route = useRoute()
@@ -10,17 +11,21 @@ const route = useRoute()
 const username = ref('')
 const password = ref('')
 const loading = ref(false)
+const agreed = ref(false)
+const showRules = ref(false)
 
 // 忘记密码弹窗
 const showReset = ref(false)
 const resetUsername = ref('')
 const resetPhone = ref('')
+const resetName = ref('')
 const resetNewPassword = ref('')
 const resetLoading = ref(false)
 const resetStep = ref(1) // 1=验证身份, 2=设置新密码
 
 async function handleLogin() {
-  if (!username.value.trim()) return MessagePlugin.warning('请输入账号名')
+  if (!username.value.trim()) return MessagePlugin.warning('请输入账号')
+  if (!agreed.value) return MessagePlugin.warning('请先阅读并同意平台规范')
   if (!password.value) return MessagePlugin.warning('请输入密码')
 
   loading.value = true
@@ -50,13 +55,14 @@ function handleSkip() {
 function openReset() {
   resetUsername.value = ''
   resetPhone.value = ''
+  resetName.value = ''
   resetNewPassword.value = ''
   resetStep.value = 1
   showReset.value = true
 }
 
 async function handleVerifyPhone() {
-  if (!resetUsername.value.trim()) return MessagePlugin.warning('请输入账号名')
+  if (!resetUsername.value.trim()) return MessagePlugin.warning('请输入账号')
   if (!resetPhone.value.trim()) return MessagePlugin.warning('请输入注册时填写的手机号')
 
   resetLoading.value = true
@@ -66,6 +72,10 @@ async function handleVerifyPhone() {
   if (!valid) {
     MessagePlugin.warning('账号与手机号不匹配')
     return
+      // 额外验证用户名
+      if (!resetName.value.trim()) return MessagePlugin.warning('请输入用户名')
+      const nameMatch = await verifyName(resetUsername.value.trim(), resetName.value.trim())
+      if (!nameMatch) return MessagePlugin.warning('用户名不匹配')
   }
   resetStep.value = 2
 }
@@ -100,10 +110,11 @@ async function handleResetPassword() {
       <h2 class="auth-title">登录</h2>
 
       <div class="auth-form">
-        <t-input v-model="username" placeholder="账号名" clearable size="large" />
+        <t-input v-model="username" placeholder="账号" clearable size="large" />
         <t-input v-model="password" type="password" placeholder="密码" clearable size="large"
           @enter="handleLogin" />
 
+        <div class="rules-check"><t-checkbox v-model="agreed">我已阅读并同意<span class="rules-link" @click.stop="showRules = true">《平台规范》</span></t-checkbox></div>
         <t-button theme="primary" size="large" block :loading="loading" @click="handleLogin">
           登录
         </t-button>
@@ -137,12 +148,24 @@ async function handleResetPassword() {
         <div class="modal-body">
           <!-- 第一步：验证身份 -->
           <template v-if="resetStep === 1">
-            <t-input v-model="resetUsername" placeholder="账号名" clearable size="large" />
+            <t-input v-model="resetUsername" placeholder="账号" clearable size="large" />
             <t-input v-model="resetPhone" placeholder="注册时填写的手机号" clearable size="large" />
+            <t-input v-model="resetName" placeholder="用户名（安全验证）" clearable size="large" />
             <t-button theme="primary" size="large" block :loading="resetLoading" @click="handleVerifyPhone">
               验证身份
             </t-button>
-          </template>
+          
+
+    
+  <teleport to="body">
+    <div v-if="showRules" class="modal-overlay" @click.self="showRules = false">
+      <div class="modal-card rules-modal">
+        <div class="modal-header"><span class="modal-title">平台规范</span><span class="modal-close" @click="showRules = false">&times;</span></div>
+        <div class="modal-body rules-body">{{ rulesContent }}</div>
+      </div>
+    </div>
+  </teleport>
+</template>
 
           <!-- 第二步：设置新密码 -->
           <template v-else>
@@ -151,8 +174,31 @@ async function handleResetPassword() {
             <t-button theme="primary" size="large" block :loading="resetLoading" @click="handleResetPassword">
               重置密码
             </t-button>
-          </template>
+          
+
+    
+  <teleport to="body">
+    <div v-if="showRules" class="modal-overlay" @click.self="showRules = false">
+      <div class="modal-card rules-modal">
+        <div class="modal-header"><span class="modal-title">平台规范</span><span class="modal-close" @click="showRules = false">&times;</span></div>
+        <div class="modal-body rules-body">{{ rulesContent }}</div>
+      </div>
+    </div>
+  </teleport>
+</template>
         </div>
+      </div>
+    </div>
+  </teleport>
+
+    
+
+    <div class="app-version">版本 1.0</div>
+  <teleport to="body">
+    <div v-if="showRules" class="modal-overlay" @click.self="showRules = false">
+      <div class="modal-card rules-modal">
+        <div class="modal-header"><span class="modal-title">平台规范</span><span class="modal-close" @click="showRules = false">&times;</span></div>
+        <div class="modal-body rules-body">{{ rulesContent }}</div>
       </div>
     </div>
   </teleport>
@@ -256,4 +302,16 @@ async function handleResetPassword() {
   color: #666;
   text-align: center;
 }
+
+.app-version {
+  text-align: center;
+  padding: 16px;
+  font-size: 11px;
+  color: #ccc;
+}
+
+.rules-check { padding: 4px 0; }
+.rules-link { color: #0052d9; cursor: pointer; text-decoration: underline; }
+.rules-modal { max-width: 420px; max-height: 80vh; }
+.rules-body { white-space: pre-wrap; font-size: 13px; line-height: 1.8; color: #333; max-height: 60vh; overflow-y: auto; }
 </style>

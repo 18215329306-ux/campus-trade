@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { supabase } from '../supabase'
+import { user as currentUser } from '../stores/auth'
 import ProductCard from '../components/ProductCard.vue'
 
 const router = useRouter()
@@ -16,10 +17,27 @@ async function doSearch(keyword) {
   if (!keyword || !keyword.trim()) return
 
   const kw = keyword.trim()
-  const { data: results } = await supabase
+  // 获取同校用户ID
+  let schoolUserIds = []
+  if (currentUser.value?.school) {
+    const { data: schoolUsers } = await supabase
+      .from('users').select('id').eq('school', currentUser.value.school)
+    schoolUserIds = (schoolUsers || []).map(u => u.id)
+  }
+  
+  let query = supabase
     .from('goods')
     .select('*')
     .or(`title.ilike.%${kw}%,description.ilike.%${kw}%,category.ilike.%${kw}%,seller.ilike.%${kw}%,campus.ilike.%${kw}%`).or('status.eq.published,status.is.null')
+  if (schoolUserIds.length > 0) {
+    query = query.in('user_id', schoolUserIds)
+  }
+  // 排除被封禁用户的商品
+  const { data: bannedUsers } = await supabase.from('users').select('id').eq('banned', true)
+  if (bannedUsers && bannedUsers.length > 0) {
+    query = query.not('user_id', 'in', '(' + bannedUsers.map(u => u.id).join(',') + ')')
+  }
+  const { data: results } = await query
 
   searchValue.value = keyword
   isSearching.value = true
@@ -79,7 +97,9 @@ function onCardClick(id) {
         @enter="handleSubmit"
         @clear="onClear"
       >
-        <template #prefix-icon><t-icon name="search" /></template>
+        <template #prefix-icon><t-icon name="search" />
+    
+</template>
       </t-input>
       <t-button variant="text" @click="onCancel">取消</t-button>
     </div>
@@ -150,6 +170,10 @@ function onCardClick(id) {
       </div>
     </div>
   </div>
+
+    
+
+    <div class="app-version">版本 1.0</div>
 </template>
 
 <style scoped>
@@ -249,5 +273,12 @@ function onCardClick(id) {
 
 .search-tag {
   cursor: pointer;
+}
+
+.app-version {
+  text-align: center;
+  padding: 16px;
+  font-size: 11px;
+  color: #ccc;
 }
 </style>

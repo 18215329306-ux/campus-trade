@@ -9,6 +9,8 @@ const activeTab = ref('home')
 
 const tabs = [
   { key: 'home', label: '首页', icon: 'home', path: '/' },
+  { key: 'deals', label: '交易', icon: 'swap', path: '/deals' },
+  { key: 'users', label: '用户', icon: 'usergroup', path: '/users' },
   { key: 'my', label: '我的', icon: 'user', path: '/my' },
 ]
 
@@ -22,6 +24,8 @@ watch(
   () => route.path,
   (path) => {
     if (path === '/') activeTab.value = 'home'
+    else if (path === '/deals') activeTab.value = 'deals'
+    else if (path === '/users') activeTab.value = 'users'
     else if (path === '/my') activeTab.value = 'my'
     else activeTab.value = ''
   },
@@ -46,7 +50,9 @@ function switchTab(key, path) {
         :class="{ 'tabbar-item--active': activeTab === tab.key }"
         @click="switchTab(tab.key, tab.path)"
       >
-        <span class="tabbar-item__icon">{{ tab.icon === 'home' ? '⌂' : '👤' }}</span>
+        <span class="tabbar-item__icon">
+                {{ tab.icon === 'home' ? '⌂' : tab.icon === 'swap' ? '⇄' : tab.icon === 'usergroup' ? '☷' : '⚙' }}
+              </span>
         <span class="tabbar-item__label">{{ tab.label }}</span>
       </div>
     </div>
@@ -62,11 +68,17 @@ function switchTab(key, path) {
   background: #f5f5f5;
   position: relative;
   padding-bottom: 56px;
+  overflow: hidden;
 }
 
 @media (min-width: 768px) {
   .app-shell {
     max-width: 960px;
+    border-radius: 16px;
+    margin-top: 16px;
+    margin-bottom: 16px;
+    min-height: calc(100vh - 32px);
+    box-shadow: 0 4px 24px rgba(0,0,0,0.08);
   }
 }
 
@@ -94,6 +106,7 @@ function switchTab(key, path) {
 @media (min-width: 768px) {
   .app-tabbar {
     max-width: 960px;
+    border-radius: 0 0 16px 16px;
   }
 }
 
