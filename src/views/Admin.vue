@@ -157,11 +157,10 @@ async function fetchReports() {
 function switchTab(t) {
   tab.value = t
   if (t === 'stats') { fetchStats(); return }
-  fetchAll()
-  tab.value = t
   if (t === 'goods') fetchGoods()
   else if (t === 'users') fetchUsers()
   else if (t === 'reports') fetchReports()
+  else if (t === 'feedbacks') fetchFeedbacks()
 }
 
 async function deleteGoods(id) {
